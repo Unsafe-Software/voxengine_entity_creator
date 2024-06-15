@@ -1,0 +1,10 @@
+# CMake Stuff
+build/
+
+# MacOS Stuff
+.DS_Store
+
+# Emacs Stuff
+*~
+\#*\#
+.\#*
