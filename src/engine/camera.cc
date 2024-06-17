@@ -33,7 +33,7 @@ namespace Engine {
     void Camera::SetOrientation(glm::vec3 orientation) { Orientation = glm::normalize(orientation); }
 
     void Camera::Inputs(GLFWwindow* window, bool recordMouse, bool recordKeys) {
-        float speed = 2.0f;
+        float speed = 0.5f;
         float sensitivity = 350.0f;
         if (recordKeys) {
             // Horizontal movement

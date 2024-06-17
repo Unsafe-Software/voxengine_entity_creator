@@ -79,7 +79,7 @@ int main() {
     lightVBO.Unbind();
     lightEBO.Unbind();
     glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    glm::vec3 lightPos = glm::vec3(128.0f, 128.0f, 128.0f);
+    glm::vec3 lightPos = glm::vec3(16.0f, 8.0f, 32.0f);
     glm::mat4 lightModel = glm::mat4(1.0f);
     lightModel = glm::translate(lightModel, lightPos);
     lightShader.Activate();
@@ -88,8 +88,8 @@ int main() {
     logger.Info("Light shader and buffers initialized successfully");
 
     // Create camera object
-    Engine::Camera camera(screen_width, screen_height, glm::vec3(-50.0f, 0.0f, 0.0f));
-    camera.SetOrientation(glm::vec3(1.0f, 0.0f, 0.0f));
+    Engine::Camera camera(screen_width, screen_height, glm::vec3(32.0f, 16.0f, 32.0f));
+    camera.SetOrientation(glm::vec3(-0.7f, -0.3f, -0.7f));
     logger.Info("Camera initialized successfully");
 
     // IMGUI setup
@@ -121,6 +121,8 @@ int main() {
     fileDialog.SetTitle("Select a voxel model file");
     fileDialog.SetTypeFilters({".vox"});
 
+    glEnable(GL_DEPTH_TEST);
+
     // Main loop
     logger.Info("Entering main loop");
     while (!glfwWindowShouldClose(window)) {
@@ -133,6 +135,10 @@ int main() {
         ImGuiIO& io = ImGui::GetIO();
         camera.Inputs(window, !io.WantCaptureMouse, !io.WantCaptureKeyboard);
         camera.UpdateMatrix(45, 0.01f, 250);
+        screen_width = io.DisplaySize.x;
+        screen_height = io.DisplaySize.y;
+        glViewport(0, 0, screen_width * 2, screen_height * 2);
+        camera.UpdateAspect(screen_width, screen_height);
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -168,10 +174,6 @@ int main() {
             ImGui::Separator();
 
             ImGui::Text("Entity settings");
-
-            float pos[3] = {entity.position.x, entity.position.y, entity.position.z};
-            ImGui::SliderFloat3("Position", pos, 0.0f, 255.0f, "%.2f", 1.0f);
-            entity.position = glm::vec3(pos[0], pos[1], pos[2]);
 
             float pos_offset[3] = {entity.position_offset.x, entity.position_offset.y, entity.position_offset.z};
             ImGui::SliderFloat3("Position offset", pos_offset, -128.0f, 128.0f, "%.2f", 1.0f);
