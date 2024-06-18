@@ -1,0 +1,10 @@
+name: Character Knight
+model: /Users/levi/Dev/GitHub/voxengine_entity_creator/chr_knight.vox
+position_offset:
+  x: -11
+  y: -10.5
+  z: 0
+rotation:
+  x: 3
+  y: 0
+  z: 0

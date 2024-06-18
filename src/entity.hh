@@ -61,7 +61,6 @@ namespace Entity {
         Utils::Logger* logger;
 
         std::string model_path;
-        glm::vec3 model_size;
         glm::vec3 velocity;
         glm::vec3 acceleration;
 
@@ -81,11 +80,10 @@ namespace Entity {
 
        public:
         std::string name;
+        glm::vec3 model_size;
         glm::vec3 position;
         glm::vec3 position_offset;
         glm::vec3 rotation;  // In 90 degree increments
-        glm::vec3 bounding_box;
-        glm::vec3 bounding_box_offset;
 
         EntityBase(Utils::Logger& logger) : VAO(), VBO(), EBO() {
             this->logger = &logger;
@@ -105,6 +103,30 @@ namespace Entity {
         };
 
         ~EntityBase(){};
+
+        void Save() {
+            // Save path is data_path but with .yml instead of .vox
+            std::string save_path = this->model_path;
+            std::string suffix = ".vox";
+            if (save_path.size() >= suffix.size() && save_path.compare(save_path.size() - suffix.size(), suffix.size(), suffix) == 0) {
+                // Replace ".vox" with ".yml"
+                save_path.replace(save_path.size() - suffix.size(), suffix.size(), ".yml");
+            }
+
+            YAML::Node data;
+            data["name"] = this->name;
+            data["model"] = this->model_path;
+            data["position_offset"]["x"] = std::ceil(this->position_offset.x * 100.0) / 100.0;
+            data["position_offset"]["y"] = std::ceil(this->position_offset.y * 100.0) / 100.0;
+            data["position_offset"]["z"] = std::ceil(this->position_offset.z * 100.0) / 100.0;
+            data["rotation"]["x"] = this->rotation.x;
+            data["rotation"]["y"] = this->rotation.y;
+            data["rotation"]["z"] = this->rotation.z;
+            std::ofstream file(save_path);
+            file << data;
+            file.close();
+            logger->Info(std::format("Saved entity `{}` to `{}`", this->name, save_path));
+        }
 
         void RenderMenu() {
             ImGui::Text("Entity: %s", this->name.c_str());
@@ -173,8 +195,9 @@ namespace Entity {
 
         glm::mat4 GetModel() {
             glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, this->position + this->position_offset);
             glm::mat4 rotationMatrix = createRotationMatrix(this->rotation.x * 90.0f, this->rotation.y * 90.0f, this->rotation.z * 90.0f);
+            glm::vec3 pos_offset_rotated = rotatePosition(this->position_offset, this->rotation.x * 90.0f, this->rotation.y * 90.0f, this->rotation.z * 90.0f);
+            model = glm::translate(model, this->position + pos_offset_rotated);
             model = model * rotationMatrix;
             return model;
         }
@@ -295,7 +318,6 @@ namespace Entity {
 
         void LoadModelForSetup(std::string model_path) {
             this->model_path = model_path;
-            this->bounding_box = glm::vec3(0);
             this->name = "Undefined";
             this->position_offset = glm::vec3(0);
             this->rotation = glm::vec3(0);
@@ -329,7 +351,6 @@ namespace Entity {
 
             while (r.cursor < remaining_file + 5 * 4) {
                 std::string chunk_name = r.String(4);
-                logger->Info(std::format("Reading chunk: `{}`", chunk_name));
                 int chunk_size = r.Int(4);
                 int child_size = r.Int(4);
                 if (chunk_name == "SIZE") {
@@ -384,6 +405,8 @@ namespace Entity {
                 }
                 blocks[voxels[i].x][voxels[i].y][voxels[i].z] = voxels[i].w;
             }
+
+            logger->Info(std::format("Loaded entity: `{}`", this->name));
         };
 
         void Triangulate() {

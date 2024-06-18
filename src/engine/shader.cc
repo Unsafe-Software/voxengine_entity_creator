@@ -56,7 +56,6 @@ namespace Engine {
         glDeleteShader(fragmentShader);
 
         id = sharedProgram;
-        this->logger->Info("Shader compiled successfully");
     }
 
     void Shader::Activate() { glUseProgram(id); }

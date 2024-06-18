@@ -18,6 +18,7 @@
 #include "engine/VAO.hh"
 #include "engine/VBO.hh"
 #include "engine/camera.hh"
+#include "engine/line.hh"
 #include "engine/shader.hh"
 #include "entity.hh"
 #include "imfilebrowser.h"
@@ -36,6 +37,25 @@ GLfloat lightVertices[] = {
     -0.1f, -0.1f, 0.1f, -0.1f, -0.1f, -0.1f, 0.1f, -0.1f, -0.1f, 0.1f, -0.1f, 0.1f, -0.1f, 0.1f, 0.1f, -0.1f, 0.1f, -0.1f, 0.1f, 0.1f, -0.1f, 0.1f, 0.1f, 0.1f};
 
 GLuint lightIndices[] = {0, 1, 2, 0, 2, 3, 0, 4, 7, 0, 7, 3, 3, 7, 6, 3, 6, 2, 2, 6, 5, 2, 5, 1, 1, 5, 4, 1, 4, 0, 4, 5, 6, 4, 6, 7};
+
+std::string getFileNameWithoutExtension(const std::string& filePath) {
+    size_t lastSlashPos = filePath.find_last_of("/\\");
+    size_t lastDotPos = filePath.find_last_of('.');
+
+    if (lastDotPos == std::string::npos || (lastSlashPos != std::string::npos && lastDotPos < lastSlashPos)) {
+        lastDotPos = std::string::npos;
+    }
+
+    if (lastSlashPos == std::string::npos) {
+        lastSlashPos = 0;
+    } else {
+        lastSlashPos += 1;
+    }
+
+    std::string fileNameWithoutExtension = filePath.substr(lastSlashPos, lastDotPos - lastSlashPos);
+
+    return fileNameWithoutExtension;
+}
 
 int main() {
     Utils::Logger logger;
@@ -111,17 +131,31 @@ int main() {
     Entity::EntityBase entity(logger);
     entity.SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
     bool entity_initialized = false;
-    entity.LoadModelForSetup("../../voxengine/data/models/chr_knight.vox");
-    entity_initialized = true;
-    // entity.Load("data/entity.yml");
-    // entity.LoadModel();
-    // entity.Triangulate();
 
-    ImGui::FileBrowser fileDialog;
-    fileDialog.SetTitle("Select a voxel model file");
-    fileDialog.SetTypeFilters({".vox"});
+    // Position offset cube
+    Engine::VAO cube_VAO;
+    cube_VAO.Bind();
+    GLfloat cube_vertices[] = {
+        -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0};
+    for (int i = 0; i < 24; i++) {
+        cube_vertices[i] *= 0.1f;
+    }
+    GLuint cube_indices[] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 7, 6, 5, 5, 4, 7, 4, 0, 3, 3, 7, 4, 4, 5, 1, 1, 0, 4, 3, 2, 6, 6, 7, 3};
+    Engine::VBO cube_VBO(cube_vertices, sizeof(cube_vertices));
+    Engine::EBO cube_EBO(cube_indices, sizeof(cube_indices));
+    cube_VAO.LinkAttrib(cube_VBO, 0, 3, GL_FLOAT, 3 * sizeof(float), (void*)0);
+    cube_VAO.Unbind();
+    Engine::Shader cube_shader(logger, "data/shaders/zero.vert", "data/shaders/zero.frag");
+    cube_shader.Activate();
+    logger.Info("Zero cube initialized successfully");
+
+    ImGui::FileBrowser openFileDialog;
+    openFileDialog.SetTitle("Select a voxel model file");
+    openFileDialog.SetTypeFilters({".vox"});
 
     glEnable(GL_DEPTH_TEST);
+
+    static char entity_name[128] = "";
 
     // Main loop
     logger.Info("Entering main loop");
@@ -147,7 +181,7 @@ int main() {
         lightShader.Activate();
         camera.Matrix(lightShader, "camMatrix");
         lightVAO.Bind();
-        glDrawElements(GL_TRIANGLES, sizeof(lightIndices) / sizeof(int), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, sizeof(lightIndices) / sizeof(uint), GL_UNSIGNED_INT, 0);
 
         // Render Entities
         if (entity_initialized) {
@@ -160,6 +194,13 @@ int main() {
             glUniformMatrix4fv(glGetUniformLocation(entityShader.id, "model"), 1, GL_FALSE, glm::value_ptr(entityModel));
             entity.Render();
         }
+
+        // Render zero cube
+        cube_shader.Activate();
+        cube_VAO.Bind();
+        camera.Matrix(cube_shader, "camMatrix");
+        glUniform3f(glGetUniformLocation(cube_shader.id, "pos"), 0.0f, 0.0f, 0.0f);
+        glDrawElements(GL_TRIANGLES, sizeof(cube_indices) / sizeof(int), GL_UNSIGNED_INT, 0);
 
         // ImGUI
         logger.Render();
@@ -175,35 +216,39 @@ int main() {
 
             ImGui::Text("Entity settings");
 
+            if (ImGui::InputTextWithHint(" ", "Entity internal name", entity_name, IM_ARRAYSIZE(entity_name))) {
+                entity.name = entity_name;
+                entity_name[0] = '\0';
+            }
+
             float pos_offset[3] = {entity.position_offset.x, entity.position_offset.y, entity.position_offset.z};
-            ImGui::SliderFloat3("Position offset", pos_offset, -128.0f, 128.0f, "%.2f", 1.0f);
+            int biggest_model_size = fmax(entity.model_size.x, fmax(entity.model_size.y, entity.model_size.z));
+            ImGui::SliderFloat3("Position offset", pos_offset, -biggest_model_size, biggest_model_size, "%.2f", 1.0f);
             entity.position_offset = glm::vec3(pos_offset[0], pos_offset[1], pos_offset[2]);
 
             int rot[3] = {static_cast<int>(entity.rotation.x), static_cast<int>(entity.rotation.y), static_cast<int>(entity.rotation.z)};
             ImGui::SliderInt3("Rotation", rot, 0, 3);
             entity.rotation = glm::vec3(rot[0], rot[1], rot[2]);
-
-            float bound[3] = {entity.bounding_box.x, entity.bounding_box.y, entity.bounding_box.z};
-            ImGui::SliderFloat3("Bounding box", bound, 0.0f, 255.0f, "%.2f", 1.0f);
-            entity.bounding_box = glm::vec3(bound[0], bound[1], bound[2]);
-
-            float bound_offset[3] = {entity.bounding_box_offset.x, entity.bounding_box_offset.y, entity.bounding_box_offset.z};
-            ImGui::SliderFloat3("Bounding box offset", bound_offset, -128.0f, 128.0f, "%.2f", 1.0f);
-            entity.bounding_box_offset = glm::vec3(bound_offset[0], bound_offset[1], bound_offset[2]);
             ImGui::Separator();
+
+            if (ImGui::Button("Save entity properties")) {
+                entity.Save();
+            }
         }
 
-        if (ImGui::Button("Open file")) fileDialog.Open();
+        if (ImGui::Button("Open file")) openFileDialog.Open();
         ImGui::End();
         ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.0f;
         ImGui::GetStyle().Colors[ImGuiCol_TitleBg].w = 1.0f;
         ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive].w = 1.0f;
-        fileDialog.Display();
-        if (fileDialog.HasSelected()) {
-            logger.Info(std::format("Loading file: {}", fileDialog.GetSelected().string()));
-            entity.LoadModelForSetup(fileDialog.GetSelected().string());
+        openFileDialog.Display();
+        if (openFileDialog.HasSelected()) {
+            logger.Info(std::format("Loading file: {}", openFileDialog.GetSelected().string()));
+            entity.LoadModelForSetup(openFileDialog.GetSelected().string());
             entity_initialized = true;
-            fileDialog.ClearSelected();
+            std::string entity_name_str = getFileNameWithoutExtension(openFileDialog.GetSelected().string());
+            std::copy(entity_name_str.begin(), entity_name_str.end(), entity_name);
+            openFileDialog.ClearSelected();
         }
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
