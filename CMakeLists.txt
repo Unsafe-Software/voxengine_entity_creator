@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8.0)
-project(VoxEngine_Entity_Creator VERSION 0.0.0 LANGUAGES C CXX)
+project(VoxEngine_Entity_Creator VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 # Path to the build number file

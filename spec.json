@@ -1,0 +1,9 @@
+{
+  "title": "VoxEngine Entity Creator",
+  "background-color": "#1679AB",
+  "icon-size": 80,
+  "contents": [
+    { "x": 100, "y": 100, "type": "file", "path": "build/VoxEngine_Entity_Creator" },
+    { "x": 300, "y": 100, "type": "link", "path": "/Desktop" }
+  ]
+}

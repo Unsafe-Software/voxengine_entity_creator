@@ -207,6 +207,7 @@ int main() {
         ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 0.25f;
         ImGui::GetStyle().Colors[ImGuiCol_TitleBg].w = 0.25f;
         ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive].w = 0.25f;
+        ImGui::SetNextWindowPos(ImVec2(1, 30));
         ImGui::Begin("Entity");
         if (entity_initialized) {
             ImGui::Text("Camera");
@@ -238,9 +239,21 @@ int main() {
 
         if (ImGui::Button("Open file")) openFileDialog.Open();
         ImGui::End();
+
+        ImGui::SetNextWindowPos(ImVec2(1, 1));
+        ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 0.0f;
+        ImGui::GetStyle().Colors[ImGuiCol_Border].w = 0.0f;
+        ImGui::Begin("Info", nullptr,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
+                ImGuiWindowFlags_NoInputs);
+        ImGui::Text(PROJECT_NAME ": " PROJECT_VERSION);
+        ImGui::End();
+        ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.0f;
+        ImGui::GetStyle().Colors[ImGuiCol_Border].w = 1.0f;
         ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.0f;
         ImGui::GetStyle().Colors[ImGuiCol_TitleBg].w = 1.0f;
         ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive].w = 1.0f;
+
         openFileDialog.Display();
         if (openFileDialog.HasSelected()) {
             logger.Info(std::format("Loading file: {}", openFileDialog.GetSelected().string()));

@@ -9,3 +9,6 @@ deploy:
 	@cd ./build;\
 		cmake -DCMAKE_BUILD_TYPE=Release ..;\
 		make && ./VoxEngine_Entity_Creator
+
+dmg:
+	appdmg spec.json voxengine_entity_creator.dmg
